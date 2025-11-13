@@ -1,0 +1,255 @@
+/* ===========================
+   TEMA GLOBAL NEON
+   =========================== */
+
+:root {
+  --cor-fundo: #0b0b0b;
+  --cor-caixa: #141414;
+  --cor-texto: #ffffff;
+  --cor-neon: #00ff9d;
+  --cor-neon-escuro: #00cc7d;
+  --cor-erro: #ff5252;
+  --cor-alerta: #ffa726;
+}
+
+/* ===========================
+   BASE
+   =========================== */
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: var(--cor-fundo);
+  color: var(--cor-texto);
+  margin: 0;
+  padding: 0;
+}
+
+/* ===========================
+   CABEÇALHO
+   =========================== */
+
+header {
+  background-color: var(--cor-neon);
+  color: #000;
+  text-align: center;
+  padding: 15px;
+  font-weight: bold;
+  font-size: 1.3em;
+  box-shadow: 0 0 20px var(--cor-neon-escuro);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+header .logout-btn {
+  position: absolute;
+  right: 20px;
+  top: 12px;
+  background-color: var(--cor-erro);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+header .logout-btn:hover {
+  background-color: #e63e3e;
+}
+
+/* ===========================
+   CONTAINERS / CAIXAS
+   =========================== */
+
+.container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 60px);
+  padding: 20px;
+}
+
+.box, .info-box {
+  background-color: var(--cor-caixa);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 0 15px #00ff9d33;
+  width: 100%;
+  max-width: 400px;
+  margin: 10px auto;
+  transition: 0.3s ease-in-out;
+}
+
+.info-box {
+  max-width: 900px;
+}
+
+.box:hover, .info-box:hover {
+  box-shadow: 0 0 25px #00ff9d55;
+}
+
+/* ===========================
+   TÍTULOS
+   =========================== */
+
+h1, h2 {
+  color: var(--cor-neon);
+  text-align: center;
+  border-bottom: 2px solid var(--cor-neon);
+  padding-bottom: 5px;
+  margin-bottom: 15px;
+}
+
+h1 {
+  border: none;
+  font-size: 1.8em;
+}
+
+h2 {
+  font-size: 1.3em;
+}
+
+/* ===========================
+   INPUTS E SELECTS
+   =========================== */
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: none;
+  border-radius: 6px;
+  background-color: #1f1f1f;
+  color: var(--cor-texto);
+  font-size: 1em;
+  transition: 0.2s;
+}
+
+input:focus, select:focus {
+  outline: none;
+  box-shadow: 0 0 8px var(--cor-neon);
+}
+
+/* ===========================
+   BOTÕES
+   =========================== */
+
+button {
+  width: 100%;
+  background-color: var(--cor-neon);
+  color: #000;
+  border: none;
+  padding: 10px;
+  font-size: 1em;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+button:hover {
+  background-color: var(--cor-neon-escuro);
+  box-shadow: 0 0 15px var(--cor-neon);
+}
+
+button.save-btn {
+  width: auto;
+  padding: 6px 12px;
+}
+
+button.logout-btn {
+  width: auto;
+}
+
+/* ===========================
+   TABELAS
+   =========================== */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background-color: #111;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 10px #00ff9d22;
+}
+
+th, td {
+  border: 1px solid #222;
+  padding: 10px;
+  text-align: center;
+  font-size: 0.95em;
+}
+
+th {
+  background-color: var(--cor-neon);
+  color: #000;
+  font-weight: bold;
+}
+
+tr:nth-child(even) {
+  background-color: #181818;
+}
+
+tr:hover {
+  background-color: #222;
+  transition: 0.2s;
+}
+
+/* ===========================
+   LINKS / MENSAGENS
+   =========================== */
+
+.toggle {
+  color: var(--cor-neon);
+  text-align: center;
+  margin-top: 10px;
+  cursor: pointer;
+  font-size: 0.9em;
+  display: block;
+  transition: 0.2s;
+}
+
+.toggle:hover {
+  color: var(--cor-neon-escuro);
+  text-decoration: underline;
+}
+
+.message {
+  text-align: center;
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+.message.error {
+  color: var(--cor-erro);
+}
+
+.message.success {
+  color: var(--cor-neon);
+}
+
+.message.alert {
+  color: var(--cor-alerta);
+}
+
+/* ===========================
+   RESPONSIVIDADE
+   =========================== */
+
+@media (max-width: 768px) {
+  .info-box {
+    padding: 15px;
+  }
+
+  header {
+    font-size: 1.1em;
+  }
+
+  table, th, td {
+    font-size: 0.85em;
+  }
+}

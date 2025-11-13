@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel do Professor</title>
+  <link rel="icon" type="image/png" href="logosesc.png" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0b0b0b;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #00ff9d;
+      color: #000;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.3em;
+    }
+
+    .logout-btn {
+      background-color: #ff5252;
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      float: right;
+    }
+
+    .logout-btn:hover {
+      background-color: #e63e3e;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .info-box {
+      background-color: #141414;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #00ff9d44;
+    }
+
+    h2 {
+      color: #00ff9d;
+      border-bottom: 2px solid #00ff9d;
+      padding-bottom: 5px;
+    }
+
+    select {
+      background-color: #1f1f1f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 8px;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #333;
+      padding: 10px;
+      text-align: center;
+    }
+
+    th {
+      background-color: #00ff9d;
+      color: #000;
+    }
+
+    input {
+      background-color: #1f1f1f;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 5px;
+      text-align: center;
+      width: 80px;
+    }
+
+    .save-btn {
+      background-color: #00ff9d;
+      border: none;
+      color: #000;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .save-btn:hover {
+      background-color: #00d87d;
+    }
+
+    #status {
+      margin-top: 15px;
+      color: #00ff9d;
+      font-weight: bold;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    Painel do Professor
+    <button class="logout-btn" onclick="logout()">Sair</button>
+  </header>
+
+  <div class="container">
+    <div class="info-box" id="prof-info">
+      <h2>Informações do Professor</h2>
+      <p><strong>Nome:</strong> <span id="prof-nome"></span></p>
+      <p><strong>Email:</strong> <span id="prof-email"></span></p>
+    </div>
+
+    <div class="info-box">
+      <h2>Minhas Turmas</h2>
+      <label for="turmaSelect">Selecione uma turma:</label>
+      <select id="turmaSelect" onchange="carregarAlunos()"></select>
+
+      <table id="tabela-alunos">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Matrícula</th>
+            <th>Nota</th>
+            <th>Frequência (%)</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          </tbody>
+      </table>
+      <div id="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:5000";
+
+    // Função helper para decodificar o Token JWT
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null; // Token inválido ou expirado
+      }
+    }
+
+    // Variável global para guardar o token
+    let authToken = null;
+    let usuario = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Modificado: Validação de segurança
+      authToken = localStorage.getItem("token");
+      if (!authToken) {
+        alert("Acesso não autorizado. Faça login.");
+        window.location.href = "index.html";
+        return;
+      }
+      
+      usuario = parseJwt(authToken);
+      
+      // Valida se o token é válido, se é de professor (nível 2) e se não expirou
+      if (!usuario || usuario.id_nivel !== 2 || usuario.exp * 1000 < Date.now()) {
+        localStorage.removeItem("token");
+        alert("Sessão inválida ou expirada. Faça login novamente.");
+        window.location.href = "index.html";
+        return;
+      }
+
+      // Modificado: Pega o NOME do token. 
+      // Email não está no token, por isso ficará em branco.
+      document.getElementById("prof-nome").textContent = usuario.nome;
+      // document.getElementById("prof-email").textContent = usuario.email; // (Não existe mais no token)
+
+      try {
+        // Modificado: Fetch com Headers e URL nova
+        const res = await fetch(`${API}/api/professor/turmas`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        if (!res.ok) {
+            if (res.status === 401) logout(); // Token expirou
+            throw new Error("Erro ao carregar turmas.");
+        }
+
+        const turmas = await res.json();
+        const select = document.getElementById("turmaSelect");
+        select.innerHTML = "<option value=''>Selecione...</option>";
+
+        turmas.forEach(t => {
+          const opt = document.createElement("option");
+          opt.value = t.id_turma;
+          opt.textContent = `${t.nome_disciplina} (${t.ano_semestre})`;
+          select.appendChild(opt);
+        });
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao carregar turmas.");
+      }
+    });
+
+    async function carregarAlunos() {
+      const idTurma = document.getElementById("turmaSelect").value;
+      const tabela = document.querySelector("#tabela-alunos tbody");
+      const status = document.getElementById("status");
+      if (!idTurma) return;
+
+      try {
+        // Modificado: Fetch com Headers
+        const res = await fetch(`${API}/api/professor/turmas/${idTurma}/alunos`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${authToken}` }
+        });
+        
+        if (!res.ok) {
+            if (res.status === 401) logout(); // Token expirou
+            throw new Error("Erro ao carregar alunos.");
+        }
+
+        const alunos = await res.json();
+        tabela.innerHTML = "";
+        
+        alunos.forEach(a => {
+          const row = document.createElement("tr");
+          // Modificado: a.id_user é a chave correta vinda do app.py
+          row.innerHTML = `
+            <td>${a.nome}</td>
+            <td>${a.matricula}</td>
+            <td><input type="number" min="0" max="10" step="0.1" value="${a.nota_final ?? ''}" id="nota-${a.id_user}"></td>
+            <td><input type="number" min="0" max="100" step="1" value="${a.frequencia ?? ''}" id="freq-${a.id_user}"></td>
+            <td><button class="save-btn" onclick="salvar(${a.id_user})">Salvar</button></td>
+          `;
+          tabela.appendChild(row);
+        });
+        status.textContent = "";
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao carregar alunos.");
+      }
+    }
+
+    async function salvar(idAluno) {
+      const idTurma = document.getElementById("turmaSelect").value;
+      // Modificado: id_user é a chave correta
+      const nota = document.getElementById(`nota-${idAluno}`).value;
+      const freq = document.getElementById(`freq-${idAluno}`).value;
+      const status = document.getElementById("status");
+
+      try {
+        // Modificado: Fetch com Headers, Method PUT e URL correta
+        const res = await fetch(`${API}/api/professor/turmas/${idTurma}/alunos/${idAluno}`, {
+          method: "PUT",
+          headers: { 
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${authToken}` 
+          },
+          body: JSON.stringify({ nota_final: nota, frequencia: freq })
+        });
+
+        if (res.ok) {
+          status.textContent = "Notas e frequência atualizadas!";
+          setTimeout(() => status.textContent = "", 3000);
+        } else {
+          if (res.status === 401) logout(); // Token expirou
+          alert("Erro ao salvar dados.");
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao conectar ao servidor.");
+      }
+    }
+
+    function logout() {
+      // Modificado: Remove o token
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Painel do Aluno</title>
+  <link rel="icon" type="image/png" href="logosesc.png" />
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #0b0b0b;
+      color: #fff;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background-color: #00ff9d;
+      color: #000;
+      padding: 15px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 1.3em;
+    }
+
+    .container {
+      padding: 20px;
+    }
+
+    .info-box {
+      background-color: #141414;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px #00ff9d44;
+    }
+
+    h2 {
+      color: #00ff9d;
+      border-bottom: 2px solid #00ff9d;
+      padding-bottom: 5px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th, td {
+      border: 1px solid #333;
+      padding: 10px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #00ff9d;
+      color: #000;
+    }
+
+    .logout-btn {
+      background-color: #ff5252;
+      border: none;
+      color: white;
+      padding: 10px 15px;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      float: right;
+    }
+
+    .logout-btn:hover {
+      background-color: #e63e3e;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    Painel do Aluno
+    <button class="logout-btn" onclick="logout()">Sair</button>
+  </header>
+
+  <div class="container">
+    <div class="info-box" id="aluno-info">
+      <h2>Informações do Aluno</h2>
+      <p><strong>Nome:</strong> <span id="aluno-nome"></span></p>
+      <p><strong>Email:</strong> <span id="aluno-email"></span></p>
+      <p><strong>CPF:</strong> <span id="aluno-cpf"></span></p>
+      <p><strong>Curso:</strong> <span id="aluno-curso"></span></p>
+      <p><strong>Matrícula:</strong> <span id="aluno-matricula"></span></p>
+      <p><strong>Status:</strong> <span id="aluno-status"></span></p>
+    </div>
+
+    <div class="info-box">
+      <h2>Minhas Turmas</h2>
+      <table id="tabela-turmas">
+        <thead>
+          <tr>
+            <th>Turma</th>
+            <th>Disciplina</th>
+            <th>Professor</th>
+            <th>Nota</th>
+            <th>Frequência (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const API = "http://127.0.0.1:5000";
+
+    // Função helper para decodificar o Token JWT
+    function parseJwt(token) {
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+      } catch (e) {
+        return null; // Token inválido ou expirado
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Modificado: Validação de segurança
+      const token = localStorage.getItem("token");
+      if (!token) {
+        alert("Acesso não autorizado. Faça login.");
+        window.location.href = "index.html";
+        return;
+      }
+      
+      const usuario = parseJwt(token);
+      
+      // Valida se o token é válido, se é de aluno (nível 3) e se não expirou
+      if (!usuario || usuario.id_nivel !== 3 || usuario.exp * 1000 < Date.now()) {
+        localStorage.removeItem("token");
+        alert("Sessão inválida ou expirada. Faça login novamente.");
+        window.location.href = "index.html";
+        return;
+      }
+      
+      // Modificado: Pega o NOME do token. 
+      // Email e CPF não estão no token, por isso ficarão em branco.
+      document.getElementById("aluno-nome").textContent = usuario.nome;
+      // document.getElementById("aluno-email").textContent = usuario.email; // (Não existe mais no token)
+      // document.getElementById("aluno-cpf").textContent = usuario.cpf; // (Não existe mais no token)
+
+      try {
+        // Modificado: Fetch com Headers e URL nova
+        const dadosRes = await fetch(`${API}/api/aluno/dados`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!dadosRes.ok) {
+            if (dadosRes.status === 401) logout(); // Token expirou ou inválido
+            throw new Error("Erro ao buscar dados do aluno.");
+        }
+        
+        const alunoData = await dadosRes.json();
+        
+        // Modificado: 'nome_curso' é a chave correta vinda do app.py
+        document.getElementById("aluno-curso").textContent = alunoData.nome_curso || "Não informado";
+        document.getElementById("aluno-matricula").textContent = alunoData.matricula || "N/A";
+        document.getElementById("aluno-status").textContent = alunoData.status_aluno || "Ativo";
+
+        // Listar turmas
+        // Modificado: Fetch com Headers e URL nova
+        const turmasRes = await fetch(`${API}/api/aluno/turmas`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!turmasRes.ok) throw new Error("Erro ao buscar turmas.");
+
+        const turmas = await turmasRes.json();
+        const tbody = document.querySelector("#tabela-turmas tbody");
+        tbody.innerHTML = "";
+
+        if (turmas.length === 0) {
+            tbody.innerHTML = "<tr><td colspan='5'>Nenhuma turma encontrada.</td></tr>";
+            return;
+        }
+
+        turmas.forEach(t => {
+          const row = document.createElement("tr");
+          // Modificado: 'nome_disciplina' e 'professor' vêm do app.py
+          row.innerHTML = `
+            <td>${t.id_turma}</td>
+            <td>${t.nome_disciplina}</td>
+            <td>${t.professor}</td>
+            <td>${t.nota_final || "-"}</td>
+            <td>${t.frequencia || "-"}</td>
+          `;
+          tbody.appendChild(row);
+        });
+
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao carregar dados do aluno.");
+      }
+    });
+
+    function logout() {
+      // Modificado: Remove o token
+      localStorage.removeItem("token");
+      window.location.href = "index.html";
+    }
+  </script>
+</body>
+</html>
