@@ -110,4 +110,4 @@ Projeto desenvolvido pela equipe de Análise e Desenvolvimento de Sistemas (UNIP
 ---
 
 ## 📚 Status do Projeto
-✅ **Concluído** (Entrega do PIM - 3º Semestre)
+✅ **Concluído** (Entrega do PIM - 2º Semestre)
