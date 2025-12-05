@@ -6,6 +6,7 @@
   <title>Portal Acadêmico - Login</title>
   <link rel="icon" type="image/png" href="logosesc.png" />
   <style>
+    /* TEMA NEON GLOBAL */
     body {
       font-family: 'Segoe UI', sans-serif;
       background-color: #0b0b0b;
@@ -13,7 +14,6 @@
       margin: 0;
       padding: 0;
     }
-
     header {
       background-color: #00ff9d;
       color: #000;
@@ -21,30 +21,27 @@
       text-align: center;
       font-weight: bold;
       font-size: 1.3em;
+      box-shadow: 0 0 15px #00cc7d;
     }
-
     .container {
       display: flex;
       justify-content: center;
       align-items: center;
       height: calc(100vh - 60px);
     }
-
     .box {
       background-color: #141414;
       padding: 30px;
       border-radius: 12px;
-      box-shadow: 0 0 10px #00ff9d44;
+      box-shadow: 0 0 15px #00ff9d44;
       width: 350px;
     }
-
     h2 {
       color: #00ff9d;
       text-align: center;
       border-bottom: 2px solid #00ff9d;
       padding-bottom: 5px;
     }
-
     input, select {
       width: 100%;
       padding: 10px;
@@ -53,8 +50,8 @@
       border-radius: 6px;
       background-color: #1f1f1f;
       color: #fff;
+      box-sizing: border-box;
     }
-
     button {
       width: 100%;
       background-color: #00ff9d;
@@ -65,12 +62,12 @@
       font-weight: bold;
       cursor: pointer;
       margin-top: 10px;
+      transition: 0.2s;
     }
-
     button:hover {
       background-color: #00d87d;
+      box-shadow: 0 0 10px #00ff9d;
     }
-
     .toggle {
       text-align: center;
       margin-top: 15px;
@@ -78,15 +75,12 @@
       cursor: pointer;
       font-size: 0.9em;
     }
-
-    .hidden {
-      display: none;
-    }
-
+    .hidden { display: none; }
     .message {
       text-align: center;
       margin-top: 10px;
       font-weight: bold;
+      min-height: 20px;
     }
   </style>
 </head>
@@ -119,7 +113,9 @@
         </select>
 
         <div id="curso-div" class="hidden">
-          <select id="curso"></select>
+          <select id="curso">
+            <option value="">Carregando cursos...</option>
+          </select>
         </div>
 
         <button onclick="cadastrar()">Cadastrar</button>
@@ -131,39 +127,40 @@
   </div>
 
   <script>
-    const API = "http://127.0.0.1:5000";
+    // CONFIGURAÇÃO DE REDE
+    const API_HOST = window.location.hostname;
+    const API_PORT = "5000";
+    const API = `http://${API_HOST}:${API_PORT}`;
 
-    // Função helper para decodificar o Token JWT
     function parseJwt(token) {
       try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+          '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)).join(''));
         return JSON.parse(jsonPayload);
-      } catch (e) {
-        return null; // Token inválido ou expirado
-      }
+      } catch (e) { return null; }
     }
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Modificado: Checa o token, não o 'usuario'
+      carregarCursos();
       const token = localStorage.getItem("token");
       if (token) {
-        const usuario = parseJwt(token);
-        
-        // Se o token for válido e não expirado
-        if (usuario && usuario.exp * 1000 > Date.now()) {
-          if (usuario.id_nivel === 2) window.location.href = "professor.html";
-          else if (usuario.id_nivel === 3) window.location.href = "aluno.html";
-        } else {
-          localStorage.removeItem("token"); // Limpa token expirado/inválido
-        }
-      } else {
-        carregarCursos(); // Carrega cursos apenas se não estiver logado
+        redirecionar(token);
       }
     });
+
+    function redirecionar(token) {
+      const usuario = parseJwt(token);
+      if (usuario && usuario.exp * 1000 > Date.now()) {
+        // AQUI ESTAVA FALTANDO O NÍVEL 1 (ADMIN)
+        if (usuario.id_nivel === 1) window.location.href = "admin.html";
+        else if (usuario.id_nivel === 2) window.location.href = "professor.html";
+        else if (usuario.id_nivel === 3) window.location.href = "aluno.html";
+      } else {
+        localStorage.removeItem("token");
+      }
+    }
 
     function toggleCadastro() {
       document.getElementById("form-login").classList.toggle("hidden");
@@ -175,13 +172,19 @@
 
     function mostrarCurso() {
       const tipo = document.getElementById("tipo-usuario").value;
-      document.getElementById("curso-div").classList.toggle("hidden", tipo === "");
+      const cursoDiv = document.getElementById("curso-div");
+      if (tipo === "3") {
+        cursoDiv.classList.remove("hidden");
+      } else {
+        cursoDiv.classList.add("hidden");
+        document.getElementById("curso").value = "";
+      }
     }
 
-    // (Sem modificação - Rota pública)
     async function carregarCursos() {
       try {
         const res = await fetch(`${API}/api/cursos`);
+        if (!res.ok) return; 
         const cursos = await res.json();
         const select = document.getElementById("curso");
         select.innerHTML = "<option value=''>Selecione o curso</option>";
@@ -191,12 +194,9 @@
           opt.textContent = c.nome_curso;
           select.appendChild(opt);
         });
-      } catch (err) {
-        console.error("Erro ao carregar cursos:", err);
-      }
+      } catch (err) { console.error(err); }
     }
 
-    // (Função de Login Modificada)
     async function login() {
       const email = document.getElementById("email").value;
       const senha = document.getElementById("senha").value;
@@ -222,28 +222,20 @@
           return;
         }
 
-        // Modificado: Salva o TOKEN, não o usuário
-        const token = dados.token;
-        localStorage.setItem("token", token);
-
-        // Decodifica o token para saber o nível
-        const usuario = parseJwt(token);
-
-        msg.textContent = "Login bem-sucedido!";
+        localStorage.setItem("token", dados.token);
+        
+        msg.textContent = "Sucesso! Redirecionando...";
         msg.style.color = "#00ff9d";
 
-        setTimeout(() => {
-          if (usuario.id_nivel === 2) window.location.href = "professor.html";
-          else if (usuario.id_nivel === 3) window.location.href = "aluno.html";
-        }, 1000);
+        // Redireciona com base no nível retornado
+        setTimeout(() => redirecionar(dados.token), 1000);
 
       } catch (err) {
-        msg.textContent = "Erro ao conectar ao servidor.";
+        msg.textContent = "Erro de conexão.";
         msg.style.color = "red";
       }
     }
 
-    // (Sem modificação - Rota pública)
     async function cadastrar() {
       const nome = document.getElementById("nome").value;
       const cpf = document.getElementById("cpf").value;
@@ -252,11 +244,18 @@
       const email = document.getElementById("email-cad").value;
       const senha = document.getElementById("senha-cad").value;
       const id_nivel = document.getElementById("tipo-usuario").value;
-      const id_curso = document.getElementById("curso").value;
+      let id_curso = document.getElementById("curso").value;
+      if (id_nivel !== "3") id_curso = null; 
+
       const msg = document.getElementById("mensagem");
 
       if (!nome || !cpf || !datanasc || !telefone || !email || !senha || !id_nivel) {
         msg.textContent = "Preencha todos os campos.";
+        msg.style.color = "orange";
+        return;
+      }
+      if (id_nivel === "3" && !id_curso) {
+        msg.textContent = "Selecione um curso para o aluno.";
         msg.style.color = "orange";
         return;
       }
@@ -267,7 +266,6 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nome, cpf, datanasc, telefone, email, senha, id_nivel, id_curso })
         });
-
         const dados = await res.json();
 
         if (!res.ok) {
@@ -275,14 +273,12 @@
           msg.style.color = "red";
           return;
         }
-
-        msg.textContent = "Cadastro realizado com sucesso! Faça login.";
+        msg.textContent = "Cadastro realizado! Faça login.";
         msg.style.color = "#00ff9d";
-
         setTimeout(() => toggleCadastro(), 1500);
 
       } catch (err) {
-        msg.textContent = "Erro ao conectar ao servidor.";
+        msg.textContent = "Erro de conexão.";
         msg.style.color = "red";
       }
     }

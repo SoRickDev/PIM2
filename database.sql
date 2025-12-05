@@ -1,4 +1,6 @@
+DROP DATABASE IF EXISTS CADASTRO;
 CREATE DATABASE IF NOT EXISTS CADASTRO;
+
 USE CADASTRO;
 
 -- -----------------------------------------------------
@@ -129,3 +131,5 @@ CREATE TABLE IF NOT EXISTS aulas_presenca (
     FOREIGN KEY (id_aluno) REFERENCES dados_aluno(id_user)
         ON DELETE CASCADE
 );
+USE CADASTRO;
+ALTER TABLE dados_aluno ADD COLUMN feedback_ia TEXT DEFAULT NULL;
